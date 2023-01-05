@@ -3,4 +3,4 @@ STOLEN is a collection of self-written code snippets which turned out to be usef
 
 
 ## Code snippets
-* remove_duplicate_read_names.py: Removes duplicate read names from a fastq.gz file. Abundant reads with the same name will be discarded
+* **remove_duplicate_read_names.py:** Removes duplicate read names from a fastq.gz file. Abundant reads with the same name will be discarded
