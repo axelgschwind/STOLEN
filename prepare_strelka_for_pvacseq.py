@@ -3,8 +3,23 @@
 # purpose: Add annotations in strelka2 VCF files for use with pVACseq
 
 import pysam
+import pysamstats
 from optparse import OptionParser
 import sys
+variant_types = ["splice_acceptor_variant", "splice_donor_variant", "stop_gained", "frameshift_variant", "stop_lost", "start_lost", "transcript_amplification", "inframe_insertion", "inframe_deletion",
+		"missense_variant", "protein_altering_variant", "splice_region_variant", "splice_donor_5th_base_variant", "splice_donor_region_variant", "splice_polypyrimidine_tract_variant",
+		"incomplete_terminal_codon_variant", "start_retained_variant", "stop_retained_variant", "synonymous_variant", "coding_sequence_variant", "mature_miRNA_variant", "NMD_transcript_variant"]
+
+def is_exonic(vep_info):
+	global variant_types
+	is_exonic = False
+
+	for vep in vep_info:
+		parts = vep.split("|")
+		if parts[1] in variant_types:
+			is_exonic = True
+	return is_exonic
+
 
 
 def main(argv):
@@ -15,7 +30,7 @@ def main(argv):
 	parser = OptionParser(usage=usage, description=desc)
 	parser.add_option("-i", "--input", action="store", dest="input", type="string", help="Input somatic Strelka2 VCF")
 	parser.add_option("-o", "--output", action="store", dest="output", type="string", default="-", help="Output VCF")
-
+	parser.add_option("--rna_bam", action="store", dest="rna_bam", type="string", default="", help="RNA BAM file")
 	(options, args) = parser.parse_args()
 
 	#Add Format fields for AF and AD for all samples
@@ -24,8 +39,15 @@ def main(argv):
 	#Add genotype information dummy
 	vcf.header.formats.add("GT", 1, "Float", "Genotype")
 	vcf.header.formats.add("AF", 1, "Float", "Variant Allele Frequency.")
-	vcf.header.formats.add("AD", 1, "Float", "Alternate depth of the SNV.")
+	vcf.header.formats.add("AD", 1, "Integer", "Alternate depth of the SNV.")
 
+	
+	if options.rna_bam != "":
+		rnafile = pysam.AlignmentFile(options.rna_bam, "rb")
+		vcf.header.formats.add("RDP", 1, "Integer", "RNA total read depth")
+		vcf.header.formats.add("RAD", 1, "Integer", "RNA alternate allele read depth")
+		vcf.header.formats.add("RAF", 1, "Float", "RNA variant allele frequency")
+  
 	new_vcf = pysam.VariantFile(options.output, "w", header=vcf.header)
  
  
@@ -68,8 +90,35 @@ def main(argv):
 				print("Could not parse STRELKA variant:", snv)
 				exit(1)
 
+			if options.rna_bam != "":
+				if not is_exonic(snv.info["CSQ"]):
+						snv.samples[sample]["RDP"] = 0
+						snv.samples[sample]["RAD"] = 0
+						snv.samples[sample]["RAF"] = 0
+				else:
+					a = pysamstats.stat_variation(rnafile, fafile="/mnt/storage2/megSAP/data/genomes/GRCh38.fa", chrom=snv.chrom, start=snv.start, end=snv.stop, truncate=True, pad=True)
+					for rec in a:
+						if(len(snv.ref[0]) == 1 and len(snv.alts[0]) == 1):
+							rna_dp = rec["matches"] + rec["mismatches"]
+							rna_alt_dp = rec[snv.alts[0]]
+							rna_af = 0.
+							if rna_dp > 0: 
+								rna_af = rna_alt_dp/rna_dp
+							snv.samples[sample]["RDP"] = rna_dp
+							snv.samples[sample]["RAD"] = rna_alt_dp
+							snv.samples[sample]["RAF"] = rna_af
+						else:
+							rna_dp = rec["matches"] + rec["mismatches"]
+							indel_count = rec["insertions"] +  rec["deletions"]
+							rna_af = 0
+							if rna_dp > 0:
+								rna_af = indel_count / rna_dp
+
+							snv.samples[sample]["RDP"] = rna_dp
+							snv.samples[sample]["RAD"] = indel_count
+							snv.samples[sample]["RAF"] = rna_af
+
 		new_vcf.write(snv)
-    
 	vcf.close()
 	new_vcf.close()
 
