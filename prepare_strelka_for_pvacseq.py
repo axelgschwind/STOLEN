@@ -6,6 +6,7 @@ import pysam
 import pysamstats
 from optparse import OptionParser
 import sys
+import pandas as pd
 variant_types = ["splice_acceptor_variant", "splice_donor_variant", "stop_gained", "frameshift_variant", "stop_lost", "start_lost", "transcript_amplification", "inframe_insertion", "inframe_deletion",
 		"missense_variant", "protein_altering_variant", "splice_region_variant", "splice_donor_5th_base_variant", "splice_donor_region_variant", "splice_polypyrimidine_tract_variant",
 		"incomplete_terminal_codon_variant", "start_retained_variant", "stop_retained_variant", "synonymous_variant", "coding_sequence_variant", "mature_miRNA_variant", "NMD_transcript_variant"]
@@ -31,6 +32,7 @@ def main(argv):
 	parser.add_option("-i", "--input", action="store", dest="input", type="string", help="Input somatic Strelka2 VCF")
 	parser.add_option("-o", "--output", action="store", dest="output", type="string", default="-", help="Output VCF")
 	parser.add_option("--rna_bam", action="store", dest="rna_bam", type="string", default="", help="RNA BAM file")
+	parser.add_option("--expr_file", action="store", dest="expr_file", type="string", default="", help="RNA expression file")
 	(options, args) = parser.parse_args()
 
 	#Add Format fields for AF and AD for all samples
@@ -48,15 +50,18 @@ def main(argv):
 		vcf.header.formats.add("RAD", 1, "Integer", "RNA alternate allele read depth")
 		vcf.header.formats.add("RAF", 1, "Float", "RNA variant allele frequency")
   
+	if options.expr_file != "":
+		expressionfile = pd.read_csv(options.expr_file, delimiter="\t", index_col=0)
+		vcf.header.formats.add("GX", ".", "String", "Gene Expression")
+
 	new_vcf = pysam.VariantFile(options.output, "w", header=vcf.header)
- 
  
 	for snv in vcf:
 		for sample in snv.samples:
 			#Add genotype dummy
 			snv.samples[sample]["GT"] = (0,1)
 			
-			#Add AF and AD
+			#Add tumor/normal AF and AD
 			snv_fields = set(["AU", "CU", "GU", "TU"])
 			indel_fields = set(["TIR", "TAR"])
 			if snv_fields.issubset( set(snv.samples[sample].keys()) ) :
@@ -90,6 +95,7 @@ def main(argv):
 				print("Could not parse STRELKA variant:", snv)
 				exit(1)
 
+			#Annoate read depth from RNA BAM
 			if options.rna_bam != "":
 				if not is_exonic(snv.info["CSQ"]):
 						snv.samples[sample]["RDP"] = 0
@@ -117,6 +123,26 @@ def main(argv):
 							snv.samples[sample]["RDP"] = rna_dp
 							snv.samples[sample]["RAD"] = indel_count
 							snv.samples[sample]["RAF"] = rna_af
+
+			#Annotate gene expression data
+			if options.expr_file != "":
+				vep_info = snv.info["CSQ"]
+
+				#annotate expression of first gene in list (pvactools can only parse one value per SNV)
+				gene_expression = {}
+				for vep in vep_info:
+					parts = vep.split("|")
+					gene_id = parts[4]
+					if not gene_id in expressionfile.index:
+						continue
+					if gene_id in gene_expression.keys():
+						continue
+					gene_expression[gene_id] = gene_id + "|" +str(expressionfile.loc[gene_id]["tpm"].item())
+
+
+				if len(gene_expression) > 0:
+					snv.samples[sample]["GX"] = ",".join(gene_expression.values())
+					#snv.samples[sample]["GX"] = list( gene_expression.values() )[0] #Take only one, arbitrary first value. See https://github.com/griffithlab/pVACtools/issues/991
 
 		new_vcf.write(snv)
 	vcf.close()
