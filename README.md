@@ -1,5 +1,5 @@
 # STOLEN - uSeful bioinformaTics cOmmandLine codE sNippets
-STOLEN is a collection of self-written code snippets which turned out to be useful in the everyday life of a bioinformatician.
+STOLEN is a collection of self-written code snippets that turned out to be useful in the everyday life of a bioinformatician.
 
 
 ## Code snippets
