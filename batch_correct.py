@@ -6,6 +6,7 @@ import sys
 import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 import os
+import numpy as np
 
 def main(argv):
 	if len(argv) == 1:
@@ -67,6 +68,7 @@ def main(argv):
 	
 		#PCA uncorrected data
 		pca = PCA()
+		df_expression = df_expression.transform(lambda x: np.log10(x+1))
 		pca.fit(df_expression.T)
 		feature = pca.transform(df_expression.T)
 
