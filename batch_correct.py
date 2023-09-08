@@ -19,12 +19,14 @@ def main(argv):
 	parser.add_option("-b", "--batch", action="store", dest="batch", type="string", default="tpm", help="TSV file with batch information. Must contain a column RNA and a column COHORT.")
 	parser.add_option("--plot", action="store_true", dest="plot", help="Plot a PCA analys with both corrected and uncorrected")
 	(options, args) = parser.parse_args()
- 
+
 	#output directory
 	odir = os.path.dirname(os.path.abspath(options.out))
- 
+
 	df_expression = pd.read_csv(options.input, delimiter="\t", index_col=0)
 	df_expression.index.name = "GENE"
+
+	df_expression = df_expression.transform(lambda x: np.log2(x+1))
 
 	dat = df_expression
 
@@ -64,11 +66,10 @@ def main(argv):
 		plt.grid()
 		plt.xlabel("PC1")
 		plt.ylabel("PC2")
-		plt.savefig(odir + "/" + "pca_corrected.pdf")
+		plt.savefig(odir + "/" + "pca_corrected.png")
 	
 		#PCA uncorrected data
 		pca = PCA()
-		df_expression = df_expression.transform(lambda x: np.log10(x+1))
 		pca.fit(df_expression.T)
 		feature = pca.transform(df_expression.T)
 
@@ -77,7 +78,7 @@ def main(argv):
 		plt.grid()
 		plt.xlabel("PC1")
 		plt.ylabel("PC2")
-		plt.savefig(odir + "/" + "pca_uncorrected.pdf")
+		plt.savefig(odir + "/" + "pca_uncorrected.png")
 
 if __name__ == "__main__":
 	main(sys.argv)
