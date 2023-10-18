@@ -24,7 +24,7 @@ def main(argv):
 			continue
 		
 		data = pd.read_csv(file, delimiter="\t", header=0, index_col=0, )
-		data.index.name = "ID"
+		data.index.name = "GENE"
 
 		#get file ID from megSAP file name
 		id = os.path.basename(file).replace("_counts.tsv","")
