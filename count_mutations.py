@@ -170,7 +170,6 @@ def main(argv):
 	snv_paths.close()
 
 	df = pd.DataFrame.from_dict(data, orient="index")
-	print(df)
 	df = df.applymap(lambda x: ",".join(x))
 	df["TUMOR"] = df.index
 	df[["TUMOR","NORMAL"]] = df["TUMOR"].str.split("-", n=1, expand=True)
