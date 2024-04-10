@@ -30,6 +30,8 @@ def main(argv):
 
 	data = {}
  
+	vep_high_impact = ["transcript_ablation", "splice_acceptor_variant", "splice_donor_variant", "stop_gained", "frameshift_variant", "stop_lost", "start_lost" , "transcript_amplification", "feature_elongation", "feature_truncation"]
+ 
 	cnv_paths = open(options.in_cnvs, "r")
 	for path in cnv_paths:
 		line = path.strip()
@@ -88,6 +90,7 @@ def main(argv):
 						content.append("AMP")
 					hits[gene] = content
 		data[id] = hits
+  
 
 	for path in snv_paths:
 		line = path.strip()
@@ -129,33 +132,45 @@ def main(argv):
 					continue
 				effects = parts[1].split("&")
 
-				for effect in effects:
-					if not effect in effects_of_interest:
-						continue
-					if effect in data[id][gene]:
-						continue
-  
-						
-					if options.use_cosmic:
-						if not effect in ["transcript_ablation", "splice_acceptor_variant", "splice_donor_variant", "stop_gained", "frameshift_variant", "stop_lost", "start_lost" , "transcript_amplification", "feature_elongation", "feature_truncation"]:
-							if pd.isna(cmc_anno):
-								continue
-					else: #CADD thresholds
+				if not options.use_cosmic:
+					for effect in effects:
+						if not effect in effects_of_interest:
+							continue
+						if effect in data[id][gene]:
+							continue
+
 						if not pd.isna(cadd_anno) and int(cadd_anno) < options.cadd_threshold:
 							continue
 						#Not all indels have a cadd anno. We only use VEP HIGH impact features in tis case
 						if pd.isna(cadd_anno):
-							if not effect in ["transcript_ablation", "splice_acceptor_variant", "splice_donor_variant", "stop_gained", "frameshift_variant", "stop_lost", "start_lost" , "transcript_amplification", "feature_elongation", "feature_truncation"]:
+							if not effect in vep_high_impact:
 								continue
 
-					content = data[id][gene].copy()
-					content.append(effect)
-					data[id][gene] = content
-					break
+						content = data[id][gene].copy()
+						content.append(effect)
+						data[id][gene] = content
+						break
+				else:
+					for effect in effects:
+						if not effect in vep_high_impact:
+							if pd.isna(cmc_anno):
+								continue
+						effect_tmp = effect
+						if not pd.isna(cmc_anno):
+							effect_tmp = str(cmc_anno)
+						if effect_tmp in data[id][gene]:
+							continue
+						content = data[id][gene].copy()
+						content.append(effect_tmp)
+						data[id][gene] = content
+						break
+
+						
 
 	snv_paths.close()
 
 	df = pd.DataFrame.from_dict(data, orient="index")
+	print(df)
 	df = df.applymap(lambda x: ",".join(x))
 	df["TUMOR"] = df.index
 	df[["TUMOR","NORMAL"]] = df["TUMOR"].str.split("-", n=1, expand=True)
@@ -164,6 +179,7 @@ def main(argv):
 	# Shifting column "ABC" to the left
 	df = pd.concat([df['NORMAL'], df.drop(columns=['NORMAL'])], axis=1)
 	df = pd.concat([df['TUMOR'], df.drop(columns=['TUMOR'])], axis=1)
+	
 
  
 	df.to_csv(options.out, sep="\t", index=False)
