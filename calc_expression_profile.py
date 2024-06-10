@@ -38,7 +38,9 @@ def main(argv):
 		#CYT score, based on GZMA and PRF1, which are dramatically upregulated upon CD8+ T cell activation
 		"CYT_SCORE": ["ENSG00000145649", "ENSG00000180644"],
 		#HLA-A, HLA-B, HLA-C
-		"GEP_HLA_I": ["ENSG00000206503", "ENSG00000234745", "ENSG00000204525"]
+		"GEP_HLA_I": ["ENSG00000206503", "ENSG00000234745", "ENSG00000204525"],
+		#B2M
+		"GEP_B2M": ["ENSG00000166710"]
 	}
  
 	#weights must be same order as gene IDs

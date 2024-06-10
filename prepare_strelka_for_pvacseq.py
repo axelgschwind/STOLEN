@@ -39,9 +39,12 @@ def main(argv):
 	vcf = pysam.VariantFile( options.input , "r")
 
 	#Add genotype information dummy
-	vcf.header.formats.add("GT", 1, "Float", "Genotype")
-	vcf.header.formats.add("AF", 1, "Float", "Variant Allele Frequency.")
-	vcf.header.formats.add("AD", 1, "Integer", "Alternate depth of the SNV.")
+	if not "GT" in vcf.header.formats.keys():
+		vcf.header.formats.add("GT", 1, "Float", "Genotype")
+	if not "AF" in vcf.header.formats.keys():
+		vcf.header.formats.add("AF", 1, "Float", "Variant Allele Frequency.")
+	if not "AD" in vcf.header.formats.keys():
+		vcf.header.formats.add("AD", 1, "Integer", "Alternate depth of the SNV.")
 
 	
 	if options.rna_bam != "":
