@@ -40,7 +40,11 @@ def main(argv):
 		#HLA-A, HLA-B, HLA-C
 		"GEP_HLA_I": ["ENSG00000206503", "ENSG00000234745", "ENSG00000204525"],
 		#B2M
-		"GEP_B2M": ["ENSG00000166710"]
+		"GEP_B2M": ["ENSG00000166710"],
+  
+		"GEP_MDM2": ["ENSG00000135679"],
+		"GEP_MDM4": ["ENSG00000198625"],
+		"GEP_EGFR": ["ENSG00000146648"]
 	}
  
 	#weights must be same order as gene IDs
