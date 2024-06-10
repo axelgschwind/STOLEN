@@ -44,7 +44,9 @@ def main(argv):
   
 		"GEP_MDM2": ["ENSG00000135679"],
 		"GEP_MDM4": ["ENSG00000198625"],
-		"GEP_EGFR": ["ENSG00000146648"]
+		"GEP_EGFR": ["ENSG00000146648"],
+		#PD-L1 = CD274 expression
+		"GEP_CD274": ["ENSG00000120217"] 
 	}
  
 	#weights must be same order as gene IDs
